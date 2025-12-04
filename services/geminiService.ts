@@ -1,10 +1,10 @@
-import { GoogleGenAI, Chat, GenerativeModel } from "@google/genai";
+
+import { GoogleGenAI, Chat } from "@google/genai";
 import { Task } from '../types';
 
-const apiKey = process.env.API_KEY || '';
-const ai = new GoogleGenAI({ apiKey });
+let ai: GoogleGenAI | null = null;
+let chatSession: Chat | null = null;
 
-// System instruction for the empathetic mentor
 const SYSTEM_INSTRUCTION = `
 당신은 '오름(Oreum)'이라는 앱의 AI 멘토입니다. 
 당신의 주 사용자는 '은둔형 외톨이' 성향이 있거나, 장기간 사회활동을 쉬고 있는 '쉬었음' 세대, 
@@ -18,10 +18,34 @@ const SYSTEM_INSTRUCTION = `
 5. 한국어로 대화하세요.
 `;
 
-let chatSession: Chat | null = null;
+export const initializeGemini = (apiKey: string) => {
+  ai = new GoogleGenAI({ apiKey });
+  chatSession = null; // Reset session on new key
+};
+
+export const checkConnection = async (apiKey: string): Promise<boolean> => {
+  try {
+    const testAi = new GoogleGenAI({ apiKey });
+    await testAi.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: 'Test connection',
+    });
+    return true;
+  } catch (error) {
+    console.error("Connection Check Failed:", error);
+    return false;
+  }
+};
+
+const ensureInitialized = () => {
+  if (!ai) {
+    throw new Error("API Key is not set. Please configure it in settings.");
+  }
+};
 
 export const getChatSession = (): Chat => {
-  if (!chatSession) {
+  ensureInitialized();
+  if (!chatSession && ai) {
     chatSession = ai.chats.create({
       model: 'gemini-2.5-flash',
       config: {
@@ -29,26 +53,26 @@ export const getChatSession = (): Chat => {
       },
     });
   }
-  return chatSession;
+  return chatSession!;
 };
 
 export const sendMessageToGemini = async (message: string): Promise<string> => {
   try {
+    ensureInitialized();
     const chat = getChatSession();
     const result = await chat.sendMessage({ message });
     return result.text || "죄송해요, 지금은 대답하기 조금 어려워요. 잠시 후 다시 말을 걸어주세요.";
   } catch (error) {
     console.error("Gemini Chat Error:", error);
-    return "네트워크 오류가 발생했습니다. 잠시 후 다시 시도해주세요.";
+    return "API 연결에 실패했습니다. 설정에서 키를 확인해주세요.";
   }
 };
 
 export const generateDailyTasks = async (mood: string): Promise<Task[]> => {
   try {
-    const model = ai.models.getGenerativeModel({ model: 'gemini-2.5-flash' }) as unknown as GenerativeModel; 
-    // Note: getGenerativeModel isn't standard in new SDK usage based on guidelines, using generateContent directly below.
-    
-    // Correct usage per guidelines:
+    ensureInitialized();
+    if (!ai) throw new Error("AI not initialized");
+
     const prompt = `
       사용자의 현재 기분 상태는 '${mood}'입니다.
       이 사용자가 오늘 수행할 수 있는 부담 없는 '아주 작은 미션' 3가지를 추천해주세요.
@@ -93,12 +117,15 @@ export const generateDailyTasks = async (mood: string): Promise<Task[]> => {
 
 export const analyzeSentiment = async (journalEntry: string): Promise<string> => {
   try {
+    ensureInitialized();
+    if (!ai) throw new Error("AI not initialized");
+
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash',
       contents: `다음 일기를 읽고, 작성자에게 해줄 수 있는 따뜻한 한 마디 위로와 격려를 50자 이내로 작성해줘: "${journalEntry}"`,
     });
     return response.text || "오늘 하루도 수고 많았어요.";
   } catch (error) {
-    return "오늘의 기록이 당신에게 힘이 되길 바라요.";
+    return "오늘의 기록이 당신에게 힘이 되길 바라요 (API 연결 확인 필요).";
   }
 };

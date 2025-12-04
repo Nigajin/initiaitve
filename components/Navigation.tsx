@@ -1,13 +1,15 @@
+
 import React from 'react';
 import { AppView } from '../types';
-import { Home, MessageCircle, Timer, BookOpen, Sun } from 'lucide-react';
+import { Home, MessageCircle, Timer, BookOpen, Sun, Settings } from 'lucide-react';
 
 interface NavigationProps {
   currentView: AppView;
   setView: (view: AppView) => void;
+  onOpenSettings: () => void;
 }
 
-const Navigation: React.FC<NavigationProps> = ({ currentView, setView }) => {
+const Navigation: React.FC<NavigationProps> = ({ currentView, setView, onOpenSettings }) => {
   const navItems = [
     { view: AppView.DASHBOARD, label: '홈', icon: <Home size={24} /> },
     { view: AppView.CHAT, label: 'AI 멘토', icon: <MessageCircle size={24} /> },
@@ -31,6 +33,13 @@ const Navigation: React.FC<NavigationProps> = ({ currentView, setView }) => {
             <span className="text-xs">{item.label}</span>
           </button>
         ))}
+        <button
+            onClick={onOpenSettings}
+            className="flex flex-col items-center gap-1 text-stone-400 hover:text-stone-600"
+          >
+            <Settings size={24} />
+            <span className="text-xs">설정</span>
+          </button>
       </div>
 
       {/* Desktop Sidebar */}
@@ -57,7 +66,15 @@ const Navigation: React.FC<NavigationProps> = ({ currentView, setView }) => {
           ))}
         </nav>
 
-        <div className="mt-auto">
+        <div className="mt-auto space-y-4">
+          <button 
+            onClick={onOpenSettings}
+            className="flex items-center gap-3 p-3 text-stone-400 hover:text-stone-600 hover:bg-stone-50 rounded-xl w-full transition-colors"
+          >
+            <Settings size={20} />
+            <span className="text-sm">API Key 설정</span>
+          </button>
+
           <div className="bg-stone-100 p-4 rounded-xl">
             <p className="text-sm text-stone-500 mb-2">오늘의 응원</p>
             <p className="text-xs text-stone-800 font-medium leading-relaxed">
